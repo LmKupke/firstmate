@@ -109,7 +109,8 @@ test_the_bound_replaces_the_calling_shell() {
     rm -f "$dir/caller" "$dir/parent"
     (
       . "$ROOT/bin/fm-timeout-lib.sh"
-      printf '%s\n' "$BASHPID" > "$dir/caller"
+      # bash 3.2 has no BASHPID; a child's PPID names this subshell on every bash.
+      sh -c 'printf "%s\n" "$PPID"' > "$dir/caller"
       PATH=$path fm_exec_timed 5 1 bash -c 'echo "$PPID" > "$1"' _ "$dir/parent"
     ) || fail "the bounded probe failed under PATH=$path"
     caller=$(cat "$dir/caller")
@@ -118,6 +119,23 @@ test_the_bound_replaces_the_calling_shell() {
       || fail "the command's parent $parent is not the replaced caller $caller under PATH=$path"
   done
   pass "fm_exec_timed replaces the calling shell instead of wrapping it"
+}
+
+# A shell with no BASHPID (stock macOS bash 3.2 never has one) must still
+# resolve the owner and run the command under set -u; the test unsets it so a
+# newer bash exercises the same path.
+test_the_bound_runs_without_bashpid_under_nounset() {
+  local out rc=0
+  # shellcheck disable=SC2016
+  out=$(PATH=$PERL_ONLY bash -c '
+    set -u
+    unset BASHPID
+    . "$1/bin/fm-timeout-lib.sh"
+    ( fm_exec_timed 5 1 bash -c "echo through; exit 3" )
+  ' _ "$ROOT" 2>&1) || rc=$?
+  [ "$rc" -eq 3 ] || fail "the bound did not run the command without BASHPID (rc=$rc, out=$out)"
+  [ "$out" = through ] || fail "the bound's output without BASHPID was '$out'"
+  pass "fm_exec_timed resolves its owner without BASHPID under set -u"
 }
 
 # The regression a direct-child watchdog had: the command dies at the bound
@@ -211,7 +229,7 @@ test_an_owner_that_dies_during_startup_ends_the_command() {
   PATH=$PERL_ONLY bash -c '
     . "$1/bin/fm-timeout-lib.sh"
     (
-      echo "$BASHPID" > "$2/watchdog"
+      bash -c "echo \$PPID" > "$2/watchdog"
       while kill -0 "$$" 2>/dev/null; do sleep 0.05; done
       fm_exec_timed 60 1 bash -c "exec sleep 300"
     ) >/dev/null 2>&1 &
@@ -342,3 +360,4 @@ test_refuses_rather_than_running_unbounded
 test_rejects_malformed_bounds_before_running_anything
 test_gnu_timeout_kills_a_term_ignoring_command_after_the_grace
 test_timed_out_names_exactly_the_bound_statuses
+test_the_bound_runs_without_bashpid_under_nounset
