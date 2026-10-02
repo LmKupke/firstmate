@@ -1,0 +1,13 @@
+=== [target] owner death: background subshell bound (60s) on sleep 300; top-level script exits -> command must be terminated ===
+script 14070 exiting
+command pid=14077
+command gone after ~2x0.5s
+
+=== [target] real caller: FM_LINT_INTERNAL=1 bin/fm-lint.sh --internal-timed under PATH bash=/bin/bash ===
+bounded-ok
+rc=4
+rc=124 elapsed=2s
+
+=== [base] same real caller with base lib ===
+/private/var/folders/8w/qy57j0112wv46zswfdpgjww00000gn/T/tmp.KyRtcJSzWU/basewt/bin/fm-timeout-lib.sh: line 224: BASHPID: unbound variable
+rc=1

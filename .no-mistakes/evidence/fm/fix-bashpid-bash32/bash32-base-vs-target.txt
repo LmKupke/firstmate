@@ -1,0 +1,24 @@
+## host bash: GNU bash, version 3.2.57(1)-release (arm64-apple-darwin24)
+
+=== [base] S1: set -u, subshell call under /bin/bash 3.2 ===
+/var/folders/8w/qy57j0112wv46zswfdpgjww00000gn/T/tmp.KyRtcJSzWU/base/bin/fm-timeout-lib.sh: line 224: BASHPID: unbound variable
+rc=127
+=== [base] S2: set -u, timeout bound (1s) on sleep 30 ===
+/var/folders/8w/qy57j0112wv46zswfdpgjww00000gn/T/tmp.KyRtcJSzWU/base/bin/fm-timeout-lib.sh: line 224: BASHPID: unbound variable
+rc=127
+elapsed=0s
+=== [base] S3: direct call (script execs perl), owner resolved ===
+script pid=10619 parent=10606
+/var/folders/8w/qy57j0112wv46zswfdpgjww00000gn/T/tmp.KyRtcJSzWU/base/bin/fm-timeout-lib.sh: line 224: BASHPID: unbound variable
+
+=== [target] S1: set -u, subshell call under /bin/bash 3.2 ===
+through
+rc=3
+=== [target] S2: set -u, timeout bound (1s) on sleep 30 ===
+rc=124
+elapsed=1s
+=== [target] S3: direct call (script execs perl), owner resolved ===
+script pid=10680 parent=10606
+watchdog argv: 1
+watchdog pid=10680
+perl -MPOSIX=WNOHANG,setpgid -MTime::HiRes=time -e \012      my ($bound, $grace, $owner) = (shift, shift, shift);\012      my $parent = getppid();\012      my ($pid, $pending, $kill_at, $timed_out) = 

@@ -1,0 +1,12 @@
+=== [base] direct call: owner must be the script's parent (the watchdog replaces the script) ===
+script pid=12540 parent=12539
+/var/folders/8w/qy57j0112wv46zswfdpgjww00000gn/T/tmp.KyRtcJSzWU/base/bin/fm-timeout-lib.sh: line 224: BASHPID: unbound variable
+=== [base] subshell call: owner must be the top-level script $$ ===
+script pid=12542
+/var/folders/8w/qy57j0112wv46zswfdpgjww00000gn/T/tmp.KyRtcJSzWU/base/bin/fm-timeout-lib.sh: line 224: BASHPID: unbound variable
+=== [target] direct call: owner must be the script's parent (the watchdog replaces the script) ===
+script pid=12544 parent=12539
+watchdog pid=12544 owner arg=12539
+=== [target] subshell call: owner must be the top-level script $$ ===
+script pid=12539
+watchdog pid=12553 owner arg=12539
