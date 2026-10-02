@@ -123,9 +123,14 @@ test_the_bound_replaces_the_calling_shell() {
 
 # A shell with no BASHPID (stock macOS bash 3.2 never has one) must still
 # resolve the owner and run the command under set -u; the test unsets it so a
-# newer bash exercises the same path.
+# newer bash exercises the same path. The owner must resolve to the calling
+# script, not collapse to its parent: a script that dies while its subshell is
+# on the way into fm_exec_timed must still end the command long before the
+# bound, which only a watch on the script itself can detect.
 test_the_bound_runs_without_bashpid_under_nounset() {
-  local out rc=0
+  local dir out rc=0 watchdog pid started
+  dir="$TMP_ROOT/no-bashpid"
+  mkdir -p "$dir"
   # shellcheck disable=SC2016
   out=$(PATH=$PERL_ONLY bash -c '
     set -u
@@ -135,6 +140,32 @@ test_the_bound_runs_without_bashpid_under_nounset() {
   ' _ "$ROOT" 2>&1) || rc=$?
   [ "$rc" -eq 3 ] || fail "the bound did not run the command without BASHPID (rc=$rc, out=$out)"
   [ "$out" = through ] || fail "the bound's output without BASHPID was '$out'"
+
+  # shellcheck disable=SC2016
+  PATH=$PERL_ONLY bash -c '
+    set -u
+    unset BASHPID
+    . "$1/bin/fm-timeout-lib.sh"
+    (
+      bash -c "echo \$PPID" > "$2/watchdog"
+      while kill -0 "$$" 2>/dev/null; do sleep 0.05; done
+      fm_exec_timed 60 1 bash -c "echo \$\$ > \"\$1\"; exec sleep 300" _ "$2/pid"
+    ) >/dev/null 2>&1 &
+    exit 0
+  ' _ "$ROOT" "$dir"
+  wait_for_file "$dir/watchdog"
+  watchdog=$(cat "$dir/watchdog")
+  wait_for_file "$dir/pid"
+  pid=$(cat "$dir/pid")
+  started=$SECONDS
+  while kill -0 "$watchdog" 2>/dev/null; do
+    if [ "$((SECONDS - started))" -ge 15 ]; then
+      kill -KILL "$watchdog" "$pid" 2>/dev/null || true
+      fail "without BASHPID the watchdog missed its dead owner and ran on toward its bound"
+    fi
+    sleep 0.02
+  done
+  ! kill -0 "$pid" 2>/dev/null || fail "without BASHPID the bounded command outlived its dead owner"
   pass "fm_exec_timed resolves its owner without BASHPID under set -u"
 }
 
